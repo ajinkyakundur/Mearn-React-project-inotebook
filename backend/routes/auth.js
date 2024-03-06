@@ -15,16 +15,17 @@ router.post('/createuser', [
     body('email','Enter a Valid Email').isEmail(),
     body('password','Password must be atleast 5 charachters').isLength({ min:5})
 ], async(req, res)=>{
+  let success = false;
  //if   there are errors, return Bad reuest and the errors
   const errors = validationResult(req);
   if(!errors.isEmpty()){
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({success, errors: errors.array() });
   }
   try{
   // check wheather the user exists already
   let user = await User.findOne({email: req.body.email});
   if(user){
-     return res.status(400).json({error:"sorry a uesr with this email is already exists"})
+     return res.status(400).json({success, error:"sorry a uesr with this email is already exists"})
   }
 
  const salt= await bcrypt.genSalt(10);
@@ -35,23 +36,15 @@ router.post('/createuser', [
     password: secPass,
     email: req.body.email
   })
-
+  
   const data ={
     user:{
         id: user.id
     }
   }
 const authtoken= jwt.sign(data, JWT_SECRET);
-// console.log(jwtdata);
-
-  
-//   .then(user => res.json(user))
-//   .catch(err=> {console.log(err)
-//     res.json({error:'please enter unique email value'})})
-//   console.log(req.body);
-//   const user= User(req.body);
-//   user.save();
-  res.json(authtoken)
+  success = true;
+  res.json({success, authtoken})
 }
 catch(error){
     console.error(error.message);
@@ -65,7 +58,7 @@ router.post('/login', [
     body('email','Enter a Valid Email').isEmail(),
     body('password','Password cannot be blank').exists()
 ], async(req, res)=>{
-
+ let success = false;
 //if there are error, return bad request and the error
 const errors = validationResult(req);
   if(!errors.isEmpty()){
@@ -76,12 +69,15 @@ try {
     let user = await User.findOne({email});
     if(!user)
     {
-        return res.status(400).json({error: "Please enter the correct crendential"});
+      success:false
+        return res.status(400).json({success, error: "Please enter the correct crendential"});
     }
 
     const passwordCompare = await bcrypt.compare(password,user.password);
     if(!passwordCompare){
-        return res.status(400).json({error: "Please enter the correct crendential"});
+        success:false
+        return res.status(400).json({success,error: "Please enter the correct crendential"});
+
     }
 
     const data ={
@@ -90,7 +86,8 @@ try {
         }
       }
     const authtoken= jwt.sign(data, JWT_SECRET);
-    res.json({authtoken})
+    success = true;
+     res.json({success,authtoken})
 } catch(error){
     console.error(error.message);
     res.status(500).send("Some error occured")
